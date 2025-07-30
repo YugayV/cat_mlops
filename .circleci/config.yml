@@ -6,38 +6,30 @@ orbs:
 jobs:
   deploy-to-gcp:
     docker:
-      - image: cimg/python:3.9
+      - image: cimg/base:stable
     steps:
       - checkout
-      - gcp-cli/setup:
-          version: latest
+      - gcp-cli/setup
       - run:
-          name: Setup service account
+          name: Setup Service Account
           command: |
-            # Store the service account key directly as JSON
-            echo '$GCLOUD_SERVICE_KEY' > /home/circleci/gcloud-service-key.json
-            
-            # Verify the JSON file was created correctly
-            echo "Service account file size: $(wc -c < /home/circleci/gcloud-service-key.json)"
-            
-            # Activate service account
-            gcloud auth activate-service-account --key-file /home/circleci/gcloud-service-key.json
+            echo "$GCLOUD_SERVICE_KEY" > /tmp/gcloud-service-key.json
+            gcloud auth activate-service-account --key-file=/tmp/gcloud-service-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
       - run:
           name: Configure Docker for GCR
           command: |
             gcloud auth configure-docker
       - run:
-          name: Build and push Docker image
+          name: Build and Push Docker Image
           command: |
-            cd catboost_mlops_project/cat_mlops
-            docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest .
-            docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest
+            docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-api:$CIRCLE_SHA1 .
+            docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-api:$CIRCLE_SHA1
       - run:
           name: Deploy to Cloud Run
           command: |
-            gcloud run deploy catboost-ml-api \
-              --image gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest \
+            gcloud run deploy catboost-api \
+              --image gcr.io/$GOOGLE_PROJECT_ID/catboost-api:$CIRCLE_SHA1 \
               --platform managed \
               --region us-central1 \
               --allow-unauthenticated \
