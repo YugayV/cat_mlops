@@ -12,7 +12,7 @@ jobs:
       - gcp-cli/setup:
           version: latest
       - run:
-          name: Setup service account (Direct JSON method)
+          name: Setup service account
           command: |
             # Store the service account key directly as JSON
             echo '$GCLOUD_SERVICE_KEY' > /home/circleci/gcloud-service-key.json
@@ -44,6 +44,7 @@ jobs:
               --port 8000
 
 workflows:
+  version: 2
   deploy-workflow:
     jobs:
       - deploy-to-gcp:
