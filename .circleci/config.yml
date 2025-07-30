@@ -5,8 +5,8 @@ orbs:
 
 jobs:
   deploy-to-gcp:
-    docker:
-      - image: cimg/base:stable
+    machine:
+      image: ubuntu-2004:202010-01
     steps:
       - checkout
       - gcp-cli/setup
