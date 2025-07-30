@@ -20,8 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 COPY model_package/ /app/model_package/
 COPY api/ /app/api/
 
-# Copy dataset from the local datasets folder
-COPY datasets/ /app/model_package/catboost_model/datasets/
+# Remove this problematic line since datasets are already included in model_package/
+# COPY datasets/ /app/model_package/catboost_model/datasets/
 
 # Create directories for trained models
 RUN mkdir -p /app/model_package/catboost_model/trained_models
