@@ -12,8 +12,31 @@ REQUIRES_PYTHON = ">=3.8.0"
 
 # What packages are required for this module to be executed?
 def list_reqs(fname="requirements.txt"):
-    with open(fname) as fd:
-        return fd.read().splitlines()
+    if fname is None:
+        # Return basic requirements if no file specified
+        return [
+            "pandas>=1.3.0",
+            "numpy>=1.21.0",
+            "scikit-learn>=1.0.0",
+            "catboost>=1.0.0",
+            "joblib>=1.0.0",
+            "strictyaml>=1.6.0",
+            "pydantic>=1.8.0"
+        ]
+    try:
+        with open(fname) as fd:
+            return fd.read().splitlines()
+    except FileNotFoundError:
+        # Return basic requirements if file not found
+        return [
+            "pandas>=1.3.0",
+            "numpy>=1.21.0",
+            "scikit-learn>=1.0.0",
+            "catboost>=1.0.0",
+            "joblib>=1.0.0",
+            "strictyaml>=1.6.0",
+            "pydantic>=1.8.0"
+        ]
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
@@ -45,7 +68,7 @@ setup(
     url=URL,
     packages=find_packages(exclude=("tests",)),
     package_data={"catboost_model": ["VERSION"]},
-    install_requires=list_reqs(REQUIREMENTS_DIR / "requirements.txt"),
+    install_requires=list_reqs(REQUIREMENTS_DIR / "requirements.txt" if (REQUIREMENTS_DIR / "requirements.txt").exists() else None),
     extras_require={},
     include_package_data=True,
     license="MIT",

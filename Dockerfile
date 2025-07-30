@@ -26,6 +26,9 @@ COPY datasets/ /app/model_package/catboost_model/datasets/
 # Create directories for trained models
 RUN mkdir -p /app/model_package/catboost_model/trained_models
 
+# Install the model package as a Python package
+RUN cd /app/model_package && pip install -e .
+
 # Train model during build phase (not during startup)
 RUN cd /app/model_package && python -m catboost_model.train_pipeline
 
