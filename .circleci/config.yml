@@ -14,9 +14,12 @@ jobs:
     docker:
       - image: cimg/base:stable
     steps:
-      - gcp-cli/setup:
-          service_account_email: $GOOGLE_SERVICE_ACCOUNT_EMAIL
-          project_id: $GOOGLE_PROJECT_ID
+      - run:
+          name: Setup Google Cloud SDK
+          command: |
+            echo $GOOGLE_SERVICE_ACCOUNT_KEY | base64 --decode > ${HOME}/gcp-key.json
+            gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
+            gcloud config set project $GOOGLE_PROJECT_ID
 
   test_model_package:
     <<: *defaults
@@ -84,7 +87,7 @@ jobs:
           version: 20.10.14
           docker_layer_caching: true
       - gcp-cli/setup:
-          service_account_email: GOOGLE_SERVICE_ACCOUNT_EMAIL
+          service_account_key: GOOGLE_SERVICE_ACCOUNT_KEY
           project_id: GOOGLE_PROJECT_ID
       - run:
           name: Copy dataset
