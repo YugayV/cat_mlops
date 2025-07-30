@@ -11,10 +11,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY  catboost_mlops_project/cat_mlops/requirements/requirements.txt /app/requirements.txt
+COPY requirements.txt /app/requirements.txt
 
 # Install Python dependencies including uvicorn explicitly
-RUN pip install --no-cache-dir -r requirements.txt && \
+RUN pip install --no-cache-dir -r /app/requirements.txt && \
     pip install --no-cache-dir uvicorn[standard]
 
 # Copy the correct model package with setup.py
