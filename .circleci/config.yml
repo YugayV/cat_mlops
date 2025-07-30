@@ -12,11 +12,28 @@ jobs:
       - gcp-cli/setup:
           version: latest
       - run:
-          name: Decode and setup service account
+          name: Setup service account with validation
           command: |
-            echo $GCLOUD_SERVICE_KEY > /home/circleci/gcloud-service-key.json
+            # Clean and decode the service account key
+            echo "$GCLOUD_SERVICE_KEY" | tr -d '\n\r\t ' | base64 -d > /tmp/temp-key.json
+            
+            # Validate JSON format
+            if ! jq empty /tmp/temp-key.json 2>/dev/null; then
+              echo "ERROR: Invalid JSON format in service account key"
+              echo "First 100 characters of decoded content:"
+              head -c 100 /tmp/temp-key.json
+              exit 1
+            fi
+            
+            # Copy to final location
+            cp /tmp/temp-key.json /home/circleci/gcloud-service-key.json
+            
+            # Activate service account
             gcloud auth activate-service-account --key-file /home/circleci/gcloud-service-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
+            
+            # Clean up temp file
+            rm /tmp/temp-key.json
       - run:
           name: Configure Docker for GCR
           command: |
@@ -24,13 +41,18 @@ jobs:
       - run:
           name: Build and push Docker image
           command: |
-            cd C:\Users\User\Documents\exp\catboost_mlops_project\cat_mlops
+            cd catboost_mlops_project/cat_mlops
             docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest .
             docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest
       - run:
           name: Deploy to Cloud Run
           command: |
-            gcloud run deploy catboost-ml-api --image gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest --platform managed --region asia-northeast3 --allow-unauthenticated --port 8000
+            gcloud run deploy catboost-ml-api \
+              --image gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest \
+              --platform managed \
+              --region us-central1 \
+              --allow-unauthenticated \
+              --port 8000
 
 workflows:
   deploy-workflow:
