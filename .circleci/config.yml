@@ -62,5 +62,27 @@ workflows:
             branches:
               only: main
 
+## Alternative approach - Store JSON directly:
+
+If the base64 encoding continues to cause issues, you can store the service account key as raw JSON in CircleCI:
+
+      - run:
+          name: Setup service account (JSON method)
+          command: |
+            # Store the service account key directly as JSON
+            echo '$GCLOUD_SERVICE_KEY' > /home/circleci/gcloud-service-key.json
+            
+            # Validate JSON format
+            if ! jq empty /home/circleci/gcloud-service-key.json 2>/dev/null; then
+              echo "ERROR: Invalid JSON format in service account key"
+              cat /home/circleci/gcloud-service-key.json
+              exit 1
+            fi
+            
+            # Activate service account
+            gcloud auth activate-service-account --key-file /home/circleci/gcloud-service-key.json
+            gcloud config set project $GOOGLE_PROJECT_ID
+
+
 
 
