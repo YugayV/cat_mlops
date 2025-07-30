@@ -6,31 +6,35 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY model_package/requirements/requirements.txt /app/requirements.txt
-COPY api/requirements.txt /app/api_requirements.txt
+COPY requirements/requirements.txt /app/requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir -r api_requirements.txt
+# Install Python dependencies including uvicorn explicitly
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir uvicorn[standard]
 
-# Copy model package
+# Copy model package and API
 COPY model_package/ /app/model_package/
-RUN cd model_package && pip install -e .
-
-# Copy API code
 COPY api/ /app/api/
 
-# Copy dataset
-COPY dataset/ /app/model_package/catboost_model/datasets/
+# Copy dataset from the local datasets folder
+COPY datasets/ /app/model_package/catboost_model/datasets/
 
-# Train model
-RUN cd model_package && python -m catboost_model.train_pipeline
+# Create directories for trained models
+RUN mkdir -p /app/model_package/catboost_model/trained_models
+
+# Train model during build phase (not during startup)
+RUN cd /app/model_package && python -m catboost_model.train_pipeline
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "api.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use python -m uvicorn to ensure it's found in the Python path
+CMD ["sh", "-c", "python -m uvicorn api.app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 30"]

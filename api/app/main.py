@@ -1,10 +1,11 @@
 import logging
 import json
-from typing import Any
+import os
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.encoders import jsonable_encoder
@@ -14,11 +15,13 @@ from api.app.config import get_logger, settings
 from catboost_model.predict import make_prediction
 from catboost_model import __version__ as model_version
 
-from fastapi import FastAPI, APIRouter
-from typing import Union
-
 # setup logging
 _logger = get_logger(logger_name=__name__)
+
+# Log startup
+_logger.info("Starting CatBoost ML API...")
+_logger.info(f"API Version: {__version__}")
+_logger.info(f"Model Version: {model_version}")
 
 app = FastAPI(
     title=settings.PROJECT_NAME, 
@@ -39,11 +42,22 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "CatBoost ML API is running!"}
+    return {"message": "CatBoost ML API is running!", "status": "healthy"}
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    """Health check endpoint for Cloud Run"""
+    try:
+        # Simple health check
+        return {
+            "status": "healthy",
+            "api_version": __version__,
+            "model_version": model_version,
+            "port": os.environ.get("PORT", "8000")
+        }
+    except Exception as e:
+        _logger.error(f"Health check failed: {e}")
+        raise HTTPException(status_code=503, detail="Service unhealthy")
 
 @app.get("/version")
 async def get_version():
@@ -305,9 +319,14 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
+# Log when app is ready
+_logger.info("CatBoost ML API initialized successfully")
 
 if __name__ == "__main__":
     # Use this for debugging purposes only
     import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8001, log_level="debug")
+    
+    # Get port from environment variable (Cloud Run compatibility)
+    port = int(os.environ.get("PORT", 8000))
+    _logger.info(f"Starting server on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
