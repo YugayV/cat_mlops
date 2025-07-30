@@ -76,12 +76,13 @@ jobs:
             python -m pytest tests/ -v
 
   build_and_push_to_gcr:
-    <<: *defaults
+    docker:
+      - image: cimg/python:3.11
     steps:
       - checkout
       - setup_remote_docker:
-          version: 20.10.18
-      - gcp-cli/install
+          version: 20.10.14
+          docker_layer_caching: true
       - gcp-cli/setup:
           service_account_email: GOOGLE_SERVICE_ACCOUNT_EMAIL
           project_id: GOOGLE_PROJECT_ID
@@ -96,16 +97,17 @@ jobs:
             docker build -t gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:${CIRCLE_SHA1} .
             docker tag gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:${CIRCLE_SHA1} gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:latest
       - run:
-          name: Push to Google Container Registry
+          name: Configure Docker to use gcloud as a credential helper
           command: |
             gcloud auth configure-docker
             docker push gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:${CIRCLE_SHA1}
             docker push gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:latest
 
   deploy_to_cloud_run:
-    <<: *defaults
+    docker:
+      - image: cimg/python:3.11
     steps:
-      - gcp-cli/install
+      - checkout
       - gcp-cli/setup:
           service_account_email: GOOGLE_SERVICE_ACCOUNT_EMAIL
           project_id: GOOGLE_PROJECT_ID
