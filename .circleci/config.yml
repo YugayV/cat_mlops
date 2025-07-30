@@ -1,0 +1,134 @@
+version: 2.1
+
+orbs:
+  gcp-cli: circleci/gcp-cli@3.1.0
+  docker: circleci/docker@2.2.0
+
+defaults: &defaults
+  docker:
+    - image: cimg/python:3.11
+  working_directory: ~/project
+
+jobs:
+  test_model_package:
+    <<: *defaults
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            python -m venv venv
+            source venv/bin/activate
+            pip install -r model_package/requirements/requirements.txt
+            pip install -r model_package/requirements/test_requirements.txt
+      - run:
+          name: Copy dataset
+          command: |
+            mkdir -p model_package/catboost_model/datasets
+            cp dataset/Dataset.csv model_package/catboost_model/datasets/
+      - run:
+          name: Train model
+          command: |
+            source venv/bin/activate
+            cd model_package
+            pip install -e .
+            python -m catboost_model.train_pipeline
+      - run:
+          name: Test model package
+          command: |
+            source venv/bin/activate
+            cd model_package
+            python -m pytest tests/ -v
+
+  test_api:
+    <<: *defaults
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            python -m venv venv
+            source venv/bin/activate
+            pip install -r model_package/requirements/requirements.txt
+            pip install -r api/requirements.txt
+      - run:
+          name: Copy dataset and train model
+          command: |
+            mkdir -p model_package/catboost_model/datasets
+            cp dataset/Dataset.csv model_package/catboost_model/datasets/
+            source venv/bin/activate
+            cd model_package
+            pip install -e .
+            python -m catboost_model.train_pipeline
+      - run:
+          name: Test API
+          command: |
+            source venv/bin/activate
+            cd api
+            python -m pytest tests/ -v
+
+  build_and_push_to_gcr:
+    <<: *defaults
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.18
+      - gcp-cli/install
+      - gcp-cli/initialize
+      - run:
+          name: Copy dataset
+          command: |
+            mkdir -p dataset
+            cp ../itern_2.1/dataset/Dataset.csv dataset/
+      - run:
+          name: Build Docker image
+          command: |
+            docker build -t gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:${CIRCLE_SHA1} .
+            docker tag gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:${CIRCLE_SHA1} gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:latest
+      - run:
+          name: Push to Google Container Registry
+          command: |
+            gcloud auth configure-docker
+            docker push gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:${CIRCLE_SHA1}
+            docker push gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:latest
+
+  deploy_to_cloud_run:
+    <<: *defaults
+    steps:
+      - gcp-cli/install
+      - gcp-cli/initialize
+      - run:
+          name: Deploy to Cloud Run
+          command: |
+            gcloud run deploy catboost-api \
+              --image gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:${CIRCLE_SHA1} \
+              --platform managed \
+              --region us-central1 \
+              --allow-unauthenticated \
+              --port 8000 \
+              --memory 2Gi \
+              --cpu 2
+
+workflows:
+  version: 2
+  build_test_deploy:
+    jobs:
+      - test_model_package
+      - test_api:
+          requires:
+            - test_model_package
+      - build_and_push_to_gcr:
+          requires:
+            - test_api
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+      - deploy_to_cloud_run:
+          requires:
+            - build_and_push_to_gcr
+          filters:
+            branches:
+              only:
+                - main
