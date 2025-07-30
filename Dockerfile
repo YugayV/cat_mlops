@@ -4,6 +4,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
+RUN pip install --upgrade pip
 RUN apt-get update && apt-get install -y \
     gcc \
     curl \
@@ -20,8 +21,8 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 COPY model_package/ /app/model_package/
 COPY api/ /app/api/
 
-# Remove this problematic line since datasets are already included in model_package/
-# COPY datasets/ /app/model_package/catboost_model/datasets/
+# Remove or comment out this line since datasets should be in model_package/
+COPY model_package/catboost_model/datasets/ /app/model_package/catboost_model/datasets/
 
 # Create directories for trained models
 RUN mkdir -p /app/model_package/catboost_model/trained_models
