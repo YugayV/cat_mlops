@@ -12,15 +12,12 @@ jobs:
       - setup_remote_docker:
           docker_layer_caching: true
       
-      # Setup GCP CLI - remove gcloud_project_id argument
-      - gcp-cli/setup:
-          gcloud_service_key: GCLOUD_SERVICE_KEY
-          google_compute_zone: GOOGLE_COMPUTE_ZONE
-      
-      # Set the project using gcloud command instead
+      # Create and setup service account key file
       - run:
-          name: Set GCP Project
+          name: Setup Service Account Key
           command: |
+            echo $GCLOUD_SERVICE_KEY | base64 -d > /tmp/gcloud-service-key.json
+            gcloud auth activate-service-account --key-file /tmp/gcloud-service-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
       
       - run:
