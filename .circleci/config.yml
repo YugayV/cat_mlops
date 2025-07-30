@@ -12,28 +12,14 @@ jobs:
       - gcp-cli/setup:
           version: latest
       - run:
-          name: Setup service account with validation
+          name: Setup service account
           command: |
-            # Clean and decode the service account key
-            echo "$GCLOUD_SERVICE_KEY" | tr -d '\n\r\t ' | base64 -d > /tmp/temp-key.json
-            
-            # Validate JSON format
-            if ! jq empty /tmp/temp-key.json 2>/dev/null; then
-              echo "ERROR: Invalid JSON format in service account key"
-              echo "First 100 characters of decoded content:"
-              head -c 100 /tmp/temp-key.json
-              exit 1
-            fi
-            
-            # Copy to final location
-            cp /tmp/temp-key.json /home/circleci/gcloud-service-key.json
+            # Store the service account key as JSON
+            echo '$GCLOUD_SERVICE_KEY' > /home/circleci/gcloud-service-key.json
             
             # Activate service account
             gcloud auth activate-service-account --key-file /home/circleci/gcloud-service-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
-            
-            # Clean up temp file
-            rm /tmp/temp-key.json
       - run:
           name: Configure Docker for GCR
           command: |
@@ -82,7 +68,12 @@ If the base64 encoding continues to cause issues, you can store the service acco
             # Activate service account
             gcloud auth activate-service-account --key-file /home/circleci/gcloud-service-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
-
+            - [Cloud Run API](https://console.developers.google.com/apis/api/run.googleapis.com/overview?project=catboost-ml123)
+            - [Container Registry API](https://console.developers.google.com/apis/api/containerregistry.googleapis.com/overview?project=catboost-ml123)
+            - [Cloud Build API](https://console.developers.google.com/apis/api/cloudbuild.googleapis.com/overview?project=catboost-ml123)
+            - [Cloud Storage API](https://console.developers.google.com/apis/api/storage.googleapis.com/overview?project=catboost-ml123)
+            - [Cloud Storage File Store API](https://console.developers.google.com/apis/api/storage-component.googleapis.com/overview?project=catboost-ml123)
+           
 
 
 
