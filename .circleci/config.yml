@@ -14,7 +14,7 @@ jobs:
       - run:
           name: Decode and setup service account
           command: |
-            echo $GCLOUD_SERVICE_KEY | base64 -d > /home/circleci/gcloud-service-key.json
+            echo $GCLOUD_SERVICE_KEY | tr -d '\n' | base64 -d > /home/circleci/gcloud-service-key.json
             gcloud auth activate-service-account --key-file /home/circleci/gcloud-service-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
       - run:
@@ -30,12 +30,7 @@ jobs:
       - run:
           name: Deploy to Cloud Run
           command: |
-            gcloud run deploy catboost-ml-api \
-              --image gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest \
-              --platform managed \
-              --region us-central1 \
-              --allow-unauthenticated \
-              --port 8000
+            gcloud run deploy catboost-ml-api --image gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest --platform managed --region asia-northeast3 --allow-unauthenticated --port 8000
 
 workflows:
   deploy-workflow:
@@ -44,4 +39,13 @@ workflows:
           filters:
             branches:
               only: main
+
+      - run:
+          name: Setup service account (alternative method)
+          command: |
+            # Store the service account key directly as JSON
+            echo '$GCLOUD_SERVICE_KEY' > /home/circleci/gcloud-service-key.json
+            gcloud auth activate-service-account --key-file /home/circleci/gcloud-service-key.json
+            gcloud config set project $GOOGLE_PROJECT_ID
+
 
