@@ -22,7 +22,7 @@ COPY catboost_mlops_project/cat_mlops/model_package/ /app/model_package/
 
 # Copy API
 COPY catboost_mlops_project/cat_mlops/api/ /app/api/
-##
+
 # Create directories for trained models and datasets
 RUN mkdir -p /app/model_package/catboost_model/trained_models
 RUN mkdir -p /app/model_package/catboost_model/datasets
