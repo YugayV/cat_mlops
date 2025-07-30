@@ -4,7 +4,7 @@ orbs:
   gcp-cli: circleci/gcp-cli@3.1.0
 
 jobs:
-  deploy-to-gcp:
+  deploy-to-gcp:  # Make sure this job name matches what's referenced in workflows
     docker:
       - image: cimg/python:3.9
     steps:
@@ -12,26 +12,12 @@ jobs:
       - setup_remote_docker:
           docker_layer_caching: true
       
-      # Create and setup service account key file
       - run:
           name: Setup Service Account Key
           command: |
-            # In your deploy-to-gcp job steps:
-            - run:
-                name: Setup Service Account Key
-                command: |
-                  # Create the service account key file
-                  echo "$GCLOUD_SERVICE_KEY" | base64 -d > /tmp/gcloud-service-key.json
-                  
-                  # Verify the JSON is valid
-                  if ! python3 -m json.tool /tmp/gcloud-service-key.json > /dev/null 2>&1; then
-                    echo "Error: Invalid JSON in service account key"
-                    exit 1
-                  fi
-                  
-                  # Activate service account
-                  gcloud auth activate-service-account --key-file /tmp/gcloud-service-key.json
-                  gcloud config set project $GOOGLE_PROJECT_ID
+            echo "$GCLOUD_SERVICE_KEY" | base64 -d > /tmp/gcloud-service-key.json
+            gcloud auth activate-service-account --key-file /tmp/gcloud-service-key.json
+            gcloud config set project $GOOGLE_PROJECT_ID
       
       - run:
           name: Configure Docker for GCR
@@ -59,17 +45,12 @@ jobs:
 workflows:
   deploy-workflow:
     jobs:
-      - deploy-to-gcp:
+      - deploy-to-gcp:  # This must match the job name above
           filters:
             branches:
               only: main
 
-# Alternative approach using gcp-cli orb
-#       - gcp-cli/setup:
-#           gcloud_service_key: GCLOUD_SERVICE_KEY
-#           google_compute_zone: GOOGLE_COMPUTE_ZONE
-      
-      # Set the project using gcloud command
+
       - run:
           name: Set GCP Project
           command: |
@@ -81,16 +62,6 @@ workflows:
           command: |
             gcloud config set project $GOOGLE_PROJECT_ID
 
-#       - run:
-#           name: Debug Service Account Key
-#           command: |
-#             echo "First few characters of decoded key:"
-#             echo $GCLOUD_SERVICE_KEY | base64 -d | head -c 100
-#             echo ""
-#             echo "File size:"
-#             echo $GCLOUD_SERVICE_KEY | base64 -d | wc -c
-
-## 5. Debug Steps
 
 If you're still having issues, add this debug step to see what's in the file:
 
