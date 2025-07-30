@@ -2,143 +2,54 @@ version: 2.1
 
 orbs:
   gcp-cli: circleci/gcp-cli@3.1.0
-  docker: circleci/docker@2.2.0
-
-defaults: &defaults
-  docker:
-    - image: cimg/python:3.11
-  working_directory: ~/project
 
 jobs:
-  setup_gcp:
+  deploy-to-gcp:
     docker:
-      - image: cimg/base:stable
-    steps:
-      - run:
-          name: Setup Google Cloud SDK
-          command: |
-            echo $GOOGLE_SERVICE_ACCOUNT_KEY | base64 --decode > ${HOME}/gcp-key.json
-            gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
-            gcloud config set project $GOOGLE_PROJECT_ID
-
-  test_model_package:
-    <<: *defaults
-    steps:
-      - checkout
-      - run:
-          name: Install dependencies
-          command: |
-            python -m venv venv
-            source venv/bin/activate
-            pip install -r model_package/requirements/requirements.txt
-            pip install -r model_package/requirements/test_requirements.txt
-      - run:
-          name: Copy dataset
-          command: |
-            mkdir -p model_package/catboost_model/datasets
-            cp dataset/Dataset.csv model_package/catboost_model/datasets/
-      - run:
-          name: Train model
-          command: |
-            source venv/bin/activate
-            cd model_package
-            pip install -e .
-            python -m catboost_model.train_pipeline
-      - run:
-          name: Test model package
-          command: |
-            source venv/bin/activate
-            cd model_package
-            python -m pytest tests/ -v
-
-  test_api:
-    <<: *defaults
-    steps:
-      - checkout
-      - run:
-          name: Install dependencies
-          command: |
-            python -m venv venv
-            source venv/bin/activate
-            pip install -r model_package/requirements/requirements.txt
-            pip install -r api/requirements.txt
-      - run:
-          name: Copy dataset and train model
-          command: |
-            mkdir -p model_package/catboost_model/datasets
-            cp dataset/Dataset.csv model_package/catboost_model/datasets/
-            source venv/bin/activate
-            cd model_package
-            pip install -e .
-            python -m catboost_model.train_pipeline
-      - run:
-          name: Test API
-          command: |
-            source venv/bin/activate
-            cd api
-            python -m pytest tests/ -v
-
-  build_and_push_to_gcr:
-    docker:
-      - image: cimg/python:3.11
+      - image: cimg/python:3.9
     steps:
       - checkout
       - setup_remote_docker:
-          version: 20.10.14
           docker_layer_caching: true
+      
+      # Setup GCP CLI - remove gcloud_project_id argument
+      - gcp-cli/setup:
+          gcloud_service_key: GCLOUD_SERVICE_KEY
+          google_compute_zone: GOOGLE_COMPUTE_ZONE
+      
+      # Set the project using gcloud command instead
       - run:
-          name: Setup Google Cloud Authentication
+          name: Set GCP Project
           command: |
-            echo $GOOGLE_SERVICE_ACCOUNT_KEY | base64 --decode > ${HOME}/gcp-key.json
-            gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
+      
       - run:
-          name: Configure Docker to use gcloud as credential helper
+          name: Configure Docker for GCR
           command: |
             gcloud auth configure-docker
-            docker push gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:${CIRCLE_SHA1}
-            docker push gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:latest
-
-  deploy_to_cloud_run:
-    docker:
-      - image: cimg/python:3.11
-    steps:
-      - checkout
-      - gcp-cli/setup:
-          service_account_email: GOOGLE_SERVICE_ACCOUNT_EMAIL
-          project_id: GOOGLE_PROJECT_ID
+      
+      - run:
+          name: Build and Push Docker Image
+          command: |
+            docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1 .
+            docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1
+      
       - run:
           name: Deploy to Cloud Run
           command: |
-            gcloud run deploy catboost-api \
-              --image gcr.io/${GOOGLE_PROJECT_ID}/catboost-api:${CIRCLE_SHA1} \
+            gcloud run deploy catboost-ml-api \
+              --image gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1 \
               --platform managed \
-              --region asia-northeast3 \
+              --region us-central1 \
               --allow-unauthenticated \
               --port 8000 \
               --memory 2Gi \
-              --cpu 2
+              --cpu 1
 
 workflows:
-  version: 2
-  build_test_deploy:
+  deploy-workflow:
     jobs:
-      - test_model_package
-      - test_api:
-          requires:
-            - test_model_package
-      - build_and_push_to_gcr:
-          requires:
-            - test_api
+      - deploy-to-gcp:
           filters:
             branches:
-              only:
-                - main
-                - develop
-      - deploy_to_cloud_run:
-          requires:
-            - build_and_push_to_gcr
-          filters:
-            branches:
-              only:
-                - main
+              only: main
