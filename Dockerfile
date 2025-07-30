@@ -44,5 +44,6 @@ CMD ["sh", "-c", "python -m uvicorn api.app.main:app --host 0.0.0.0 --port ${POR
 
 
 # Add this line before the training step to copy the dataset from the correct location
-COPY datasets/Dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
+COPY cat_mlops/model_package/ /app/model_package/
+COPY dataset/Dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
 
