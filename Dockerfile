@@ -41,3 +41,7 @@ EXPOSE 8000
 
 # Use python -m uvicorn to ensure it's found in the Python path
 CMD ["sh", "-c", "python -m uvicorn api.app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 30"]
+
+
+# Add this line before the training step to copy the dataset from the correct location
+COPY ../itern_2.1/dataset/Dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
