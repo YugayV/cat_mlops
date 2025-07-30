@@ -43,11 +43,6 @@ workflows:
           filters:
             branches:
               only: main
-                - [Cloud Run API](https://console.developers.google.com/apis/api/run.googleapis.com/overview?project=catboost-ml123)
-                - [Container Registry API](https://console.developers.google.com/apis/api/containerregistry.googleapis.com/overview?project=catboost-ml123)
-                - [Cloud Build API](https://console.developers.google.com/apis/api/cloudbuild.googleapis.com/overview?project=catboost-ml123)
-                - [Cloud Storage API](https://console.developers.google.com/apis/api/storage.googleapis.com/overview?project=catboost-ml123)
-                - [Cloud Storage File Store API](https://console.developers.google.com/apis/api/storage-component.googleapis.com/overview?project=catboost-ml123)
            
 
 
