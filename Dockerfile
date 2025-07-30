@@ -27,7 +27,7 @@ COPY api/ /app/api/
 RUN mkdir -p /app/model_package/catboost_model/trained_models
 # Create datasets directory and copy dataset
 RUN mkdir -p /app/model_package/catboost_model/datasets/
-COPY dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
+##COPY dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
 
 # Install the model package as a Python package
 RUN cd /app/model_package && pip install -e .
