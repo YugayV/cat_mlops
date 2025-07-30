@@ -1,24 +1,23 @@
 version: 2.1
 
 orbs:
-  gcp-cli: circleci/gcp-cli@3.1.0  # Use latest version
+  gcp-cli: circleci/gcp-cli@3.1.0
   docker: circleci/docker@2.2.0
-
-jobs:
-
-  setup_gcp:
-      docker:
-        - image: cimg/base:stable
-      steps:
-        - gcp-cli/setup:
-            service_account_email: $GOOGLE_SERVICE_ACCOUNT_EMAIL
-            project_id: $GOOGLE_PROJECT_ID
 
 defaults: &defaults
   docker:
     - image: cimg/python:3.11
   working_directory: ~/project
-  
+
+jobs:
+  setup_gcp:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - gcp-cli/setup:
+          service_account_email: $GOOGLE_SERVICE_ACCOUNT_EMAIL
+          project_id: $GOOGLE_PROJECT_ID
+
   test_model_package:
     <<: *defaults
     steps:
