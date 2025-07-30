@@ -14,7 +14,7 @@ jobs:
       - run:
           name: Decode and setup service account
           command: |
-            echo $GCLOUD_SERVICE_KEY | tr -d '\n' | base64 -d > /home/circleci/gcloud-service-key.json
+            echo $GCLOUD_SERVICE_KEY > /home/circleci/gcloud-service-key.json
             gcloud auth activate-service-account --key-file /home/circleci/gcloud-service-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
       - run:
@@ -40,12 +40,5 @@ workflows:
             branches:
               only: main
 
-      - run:
-          name: Setup service account (alternative method)
-          command: |
-            # Store the service account key directly as JSON
-            echo '$GCLOUD_SERVICE_KEY' > /home/circleci/gcloud-service-key.json
-            gcloud auth activate-service-account --key-file /home/circleci/gcloud-service-key.json
-            gcloud config set project $GOOGLE_PROJECT_ID
 
 
