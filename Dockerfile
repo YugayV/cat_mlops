@@ -22,11 +22,10 @@ COPY model_package/ /app/model_package/
 COPY api/ /app/api/
 
 # Remove or comment out this line since datasets should be in model_package/
-COPY model_package/catboost_model/datasets/ /app/model_package/catboost_model/datasets/
+#COPY model_package/catboost_model/datasets/ /app/model_package/catboost_model/datasets/
 
 # Create directories for trained models
 RUN mkdir -p /app/model_package/catboost_model/trained_models
-
 # Install the model package as a Python package
 RUN cd /app/model_package && pip install -e .
 
