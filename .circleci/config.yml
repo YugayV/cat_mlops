@@ -6,7 +6,8 @@ orbs:
 jobs:
   deploy-to-gcp:
     machine:
-      image: ubuntu-2004:202010-01
+      image: ubuntu-2204:2023.04.2
+    resource_class: medium
     steps:
       - checkout
       - gcp-cli/setup
