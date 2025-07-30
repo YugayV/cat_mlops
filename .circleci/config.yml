@@ -24,7 +24,7 @@ jobs:
       - run:
           name: Build and push Docker image
           command: |
-            cd catboost_mlops_project/cat_mlops
+            cd C:\Users\User\Documents\exp\catboost_mlops_project\cat_mlops
             docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest .
             docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest
       - run:
