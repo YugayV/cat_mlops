@@ -23,8 +23,8 @@ def make_prediction(
     data = pd.DataFrame(input_data)
     
     # Make prediction
-    prediction = _catboost_pipe.predict(data[config.model_config.features])
-    prediction_proba = _catboost_pipe.predict_proba(data[config.model_config.features])
+    prediction = _catboost_pipe.predict(data[config.ml_model_config.features])
+    prediction_proba = _catboost_pipe.predict_proba(data[config.ml_model_config.features])
     
     output = {
         "predictions": prediction.tolist() if hasattr(prediction, 'tolist') else prediction,

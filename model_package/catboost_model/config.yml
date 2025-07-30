@@ -6,7 +6,7 @@ app_config:
   pipeline_save_file: catboost_pipeline
 
 # Model Parameters
-model_config:
+ml_model_config:
   target: FIN_JGMT
   features:
     - DV_R

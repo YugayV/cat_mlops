@@ -62,13 +62,13 @@ def split_data(*, dataframe: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     # Remove PIPE_NO column as it's not a feature
     features_df = dataframe.drop(['PIPE_NO'], axis=1)
     
-    X = features_df[config.model_config.features]
-    y = features_df[config.model_config.target]
+    X = features_df[config.ml_model_config.features]
+    y = features_df[config.ml_model_config.target]
     
     X_train, X_test, y_train, y_test = train_test_split(
         X, y,
-        test_size=config.model_config.test_size,
-        random_state=config.model_config.random_state,
+        test_size=config.ml_model_config.test_size,
+        random_state=config.ml_model_config.random_state,
         stratify=y
     )
     

@@ -1,65 +1,41 @@
 import logging
 import sys
-from types import FrameType
-from typing import List, cast
+from typing import List
 
 from loguru import logger
-from pydantic import AnyHttpUrl, BaseSettings
-
-
-class LoggingSettings(BaseSettings):
-    LOGGING_LEVEL: int = logging.INFO
+from pydantic import AnyHttpUrl
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
+    PROJECT_NAME: str = "CatBoost MLOps API"
     
-    # Meta
-    PROJECT_NAME: str = "CatBoost Model API"
+    # CORS settings
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
     
-    # CORS
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = [
-        "http://localhost:3000",  # React default
-        "http://localhost:8000",  # FastAPI default
-        "http://localhost:8080",  # Vue default
-    ]
-
     class Config:
         case_sensitive = True
 
 
-class InterceptHandler(logging.Handler):
-    def emit(self, record: logging.LogRecord) -> None:
-        # Get corresponding Loguru level if it exists
-        try:
-            level = logger.level(record.levelname).name
-        except ValueError:
-            level = record.levelno
-
-        # Find caller from where originated the logged message
-        frame, depth = logging.currentframe(), 2
-        while frame.f_code.co_filename == logging.__file__:
-            frame = cast(FrameType, frame.f_back)
-            depth += 1
-
-        logger.opt(depth=depth, exception=record.exc_info).log(
-            level,
-            record.getMessage(),
-        )
-
-
-def setup_app_logging(config: Settings) -> None:
-    """Prepare custom logging for our application."""
-
-    LOGGERS = ("uvicorn.asgi", "uvicorn.access")
-    logging.getLogger().handlers = [InterceptHandler()]
-    for logger_name in LOGGERS:
-        logging_logger = logging.getLogger(logger_name)
-        logging_logger.handlers = [InterceptHandler(level=LoggingSettings().LOGGING_LEVEL)]
-
-    logger.configure(
-        handlers=[{"sink": sys.stderr, "level": LoggingSettings().LOGGING_LEVEL}]
+def get_logger(logger_name: str = None):
+    """Configure and return logger instance."""
+    # Remove default handler
+    logger.remove()
+    
+    # Add custom handler with format
+    logger.add(
+        sys.stdout,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+        level="INFO"
     )
+    
+    # If logger_name is provided, you can use it for context
+    if logger_name:
+        logger.bind(name=logger_name)
+    
+    return logger
 
 
+# Create settings instance
 settings = Settings()
