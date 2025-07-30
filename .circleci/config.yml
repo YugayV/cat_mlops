@@ -83,7 +83,7 @@ jobs:
           version: 20.10.18
       - gcp-cli/install
       - gcp-cli/setup:
-          service_account_email: $GOOGLE_SERVICE_ACCOUNT_EMAIL
+          service_account_email: vamp.09.94@gmail.com
           project_id: $GOOGLE_PROJECT_ID
       - run:
           name: Copy dataset
