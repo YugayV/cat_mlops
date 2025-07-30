@@ -4,73 +4,44 @@ orbs:
   gcp-cli: circleci/gcp-cli@3.1.0
 
 jobs:
-  deploy-to-gcp:  # Make sure this job name matches what's referenced in workflows
+  deploy-to-gcp:
     docker:
       - image: cimg/python:3.9
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
-      
+      - gcp-cli/setup:
+          version: latest
       - run:
-          name: Setup Service Account Key
+          name: Decode and setup service account
           command: |
-            echo "$GCLOUD_SERVICE_KEY" | base64 -d > /tmp/gcloud-service-key.json
-            gcloud auth activate-service-account --key-file /tmp/gcloud-service-key.json
+            echo $GCLOUD_SERVICE_KEY | base64 -d > /home/circleci/gcloud-service-key.json
+            gcloud auth activate-service-account --key-file /home/circleci/gcloud-service-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
-      
       - run:
           name: Configure Docker for GCR
           command: |
             gcloud auth configure-docker
-      
       - run:
-          name: Build and Push Docker Image
+          name: Build and push Docker image
           command: |
-            docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1 .
-            docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1
-      
+            cd catboost_mlops_project/cat_mlops
+            docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest .
+            docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest
       - run:
           name: Deploy to Cloud Run
           command: |
             gcloud run deploy catboost-ml-api \
-              --image gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1 \
+              --image gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:latest \
               --platform managed \
               --region us-central1 \
               --allow-unauthenticated \
-              --port 8000 \
-              --memory 2Gi \
-              --cpu 1
+              --port 8000
 
 workflows:
   deploy-workflow:
     jobs:
-      - deploy-to-gcp:  # This must match the job name above
+      - deploy-to-gcp:
           filters:
             branches:
               only: main
-
-
-      - run:
-          name: Set GCP Project
-          command: |
-            gcloud config set project $GOOGLE_PROJECT_ID
-      
-      # Set the project using gcloud command
-      - run:
-          name: Set GCP Project
-          command: |
-            gcloud config set project $GOOGLE_PROJECT_ID
-
-
-If you're still having issues, add this debug step to see what's in the file:
-
-- run:
-    name: Debug Service Account Key
-    command: |
-      echo "First few characters of decoded key:"
-      echo $GCLOUD_SERVICE_KEY | base64 -d | head -c 100
-      echo ""
-      echo "File size:"
-      echo $GCLOUD_SERVICE_KEY | base64 -d | wc -c
 
