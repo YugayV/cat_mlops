@@ -29,14 +29,11 @@ jobs:
             gcloud auth configure-docker
       
       - run:
-          name: Build and Push Docker Image
+          name: Build and push Docker image
           command: |
-            # Download dataset from GitHub
-            curl -L -o datasets/Dataset.csv https://github.com/YugayV/cat_mlops/blob/c8e2e444b7e52466e830af56d6b846fa46ada53f/datasets/Dataset.csv
-            # Build Docker image
-            docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1 .
-            # Push Docker image to Google Container Registry
-            docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1
+            docker build -f catboost_mlops_project/cat_mlops/Dockerfile -t catboost-mlops .
+            docker tag catboost-mlops asia-northeast3-docker.pkg.dev/catboost-ml123/yugayv/catboost-ml-api:latest
+            docker push asia-northeast3-docker.pkg.dev/catboost-ml123/yugayv/catboost-ml-api:latest
             # Deploy to Cloud Run
             gcloud run deploy catboost-ml-api \
       

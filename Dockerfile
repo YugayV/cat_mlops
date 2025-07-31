@@ -20,28 +20,22 @@ RUN pip install --no-cache-dir -r /app/requirements.txt && \
 # Copy the correct model package with setup.py
 COPY model_package/ /app/model_package/
 
-# Copy API
-COPY api/ /app/api/
-
-# Create directories for trained models and datasets
-RUN mkdir -p /app/model_package/catboost_model/trained_models
-# Create datasets directory and copy dataset
-RUN mkdir -p /app/model_package/catboost_model/datasets/
-##COPY dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
-
-# Install the model package as a Python package
+# Install the model package
 RUN cd /app/model_package && pip install -e .
 
-# Train model during build phase (not during startup)
-RUN cd /app/model_package && python -m catboost_model.train_pipeline
+# Copy API code
+COPY api/ /app/api/
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app
+# Copy dataset to the expected location
+# Copy dataset from correct location
+COPY Dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
 
 # Expose port
 EXPOSE 8000
 
-# Use python -m uvicorn to ensure it's found in the Python path
-CMD ["sh", "-c", "python -m uvicorn api.app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 30"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
+# Updated CMD to properly handle PORT environment variable
+CMD ["sh", "-c", "exec uvicorn api.app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 30 --access-log"]

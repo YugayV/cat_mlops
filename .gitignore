@@ -145,3 +145,4 @@ gcp-key.json
 # OS
 .DS_Store
 Thumbs.db
+*.csv
