@@ -4,47 +4,53 @@ orbs:
   gcp-cli: circleci/gcp-cli@3.1.0
 
 jobs:
-  deploy-to-gcp:
-    machine:
-      image: ubuntu-2204:2023.04.2
-    resource_class: medium
+  build_test_deploy:
+    docker:
+      - image: cimg/python:3.9
     steps:
       - checkout
-      - gcp-cli/setup
+      - setup_remote_docker:
+          docker_layer_caching: true
+      
+      # Setup GCP CLI without project_id argument
+      - gcp-cli/setup:
+          gcloud_service_key: GCLOUD_SERVICE_KEY
+          google_compute_zone: GOOGLE_COMPUTE_ZONE
+      
+      # Set the project using gcloud command
       - run:
-          name: Setup Service Account
+          name: Set GCP Project
           command: |
-            echo "$GCLOUD_SERVICE_KEY" > /tmp/gcloud-service-key.json
-            gcloud auth activate-service-account --key-file=/tmp/gcloud-service-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
+      
       - run:
           name: Configure Docker for GCR
           command: |
             gcloud auth configure-docker
+      
       - run:
           name: Build and Push Docker Image
           command: |
-            docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-api:$CIRCLE_SHA1 .
-            docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-api:$CIRCLE_SHA1
+            cd catboost_mlops_project/cat_mlops
+            docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1 .
+            docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1
+      
       - run:
           name: Deploy to Cloud Run
           command: |
-            gcloud run deploy catboost-api \
-              --image gcr.io/$GOOGLE_PROJECT_ID/catboost-api:$CIRCLE_SHA1 \
+            gcloud run deploy catboost-ml-api \
+              --image gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1 \
               --platform managed \
-              --region us-central1 \
+              --region asia-northeast3 \
               --allow-unauthenticated \
-              --port 8000
+              --port 8000 \
+              --memory 2Gi \
+              --cpu 1
 
 workflows:
-  version: 2
-  deploy-workflow:
+  build_test_deploy:
     jobs:
-      - deploy-to-gcp:
+      - build_test_deploy:
           filters:
             branches:
               only: main
-           
-
-
-
