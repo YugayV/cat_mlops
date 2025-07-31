@@ -47,15 +47,15 @@ jobs:
       - run:
           name: Deploy to Cloud Run
           command: |
-            gcloud run deploy catboost-api \
-              --image gcr.io/$GOOGLE_PROJECT_ID/catboost-mlops:$CIRCLE_SHA1 \
-              --platform managed \
-              --region us-central1 \
-              --allow-unauthenticated \
-              --port 8000 \
-              --timeout 300 \
-              --memory 2Gi \
-              --cpu 1
+           gcloud run deploy catboost-api
+           --image gcr.io/$GOOGLE_PROJECT_ID/catboost-mlops:latest
+           --platform managed
+           --region asia-northeast3
+           --port 8000
+           --timeout 900
+           --memory 2Gi
+           --cpu 1
+           --allow-unauthenticated
 
 workflows:
   version: 2

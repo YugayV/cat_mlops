@@ -2,6 +2,7 @@ import logging
 import json
 import os
 from typing import Any, Union
+import uvicorn
 
 import numpy as np
 import pandas as pd
@@ -322,11 +323,26 @@ if settings.BACKEND_CORS_ORIGINS:
 # Log when app is ready
 _logger.info("CatBoost ML API initialized successfully")
 
+
+from fastapi import FastAPI
+import uvicorn
+import os
+
+app = FastAPI(title="CatBoost API", version="1.0.0")
+
+@app.get("/")
+async def root():
+    return {"message": "CatBoost API is running", "status": "healthy"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+@app.get("/predict")
+async def predict():
+    # Placeholder for prediction logic
+    return {"prediction": "placeholder", "status": "success"}
+
 if __name__ == "__main__":
-    # Use this for debugging purposes only
-    import uvicorn
-    
-    # Get port from environment variable (Cloud Run compatibility)
     port = int(os.environ.get("PORT", 8000))
-    _logger.info(f"Starting server on port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=port)

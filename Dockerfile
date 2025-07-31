@@ -1,42 +1,33 @@
-FROM python:3.11-slim
+FROM python:3.9-slim
 
 # Set working directory
 WORKDIR /app
 
+# Set Python path
+ENV PYTHONPATH=/app:$PYTHONPATH
+ENV PYTHONUNBUFFERED=1
+
 # Install system dependencies
-RUN pip install --upgrade pip
 RUN apt-get update && apt-get install -y \
     gcc \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY requirements/requirements.txt /app/requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Python dependencies including uvicorn explicitly
-RUN pip install --no-cache-dir -r /app/requirements.txt && \
-    pip install --no-cache-dir uvicorn[standard]
+# Copy the entire project
+COPY . .
 
-# Copy the correct model package with setup.py
-COPY model_package/ /app/model_package/
-
-# Install the model package
-RUN cd /app/model_package && pip install -e .
-
-# Copy API code
-COPY api/ /app/api/
-
-# Copy dataset to the expected location
-# Copy dataset from correct location
-# COPY Dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
+# Create __init__.py files if they don't exist
+RUN touch api/__init__.py model_package/__init__.py
 
 # Expose port
 EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+  CMD curl -f http://localhost:8000/health || exit 1
 
-# Updated CMD to properly handle PORT environment variable
-# Alternative CMD that might work better with Cloud Run
-CMD exec uvicorn api.app.main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 30
+# Use exec form for better signal handling
+CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
