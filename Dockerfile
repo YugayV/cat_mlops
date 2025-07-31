@@ -1,33 +1,47 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
 
-# Set Python path
-ENV PYTHONPATH=/app:$PYTHONPATH
-ENV PYTHONUNBUFFERED=1
-
 # Install system dependencies
+RUN pip install --upgrade pip
 RUN apt-get update && apt-get install -y \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt /app/requirements.txt
 
-# Copy the entire project
-COPY . .
+# Install Python dependencies including uvicorn explicitly
+RUN pip install --no-cache-dir -r /app/requirements.txt && \
+    pip install --no-cache-dir uvicorn[standard]
 
-# Create __init__.py files if they don't exist
-RUN touch api/__init__.py model_package/__init__.py
+# Copy the correct model package with setup.py
+COPY model_package/ /app/model_package/
+
+# Copy API
+COPY api/ /app/api/
+
+# Create directories for trained models and datasets
+RUN mkdir -p /app/model_package/catboost_model/trained_models
+# Create datasets directory and copy dataset
+RUN mkdir -p /app/model_package/catboost_model/datasets/
+##COPY dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
+
+# Install the model package as a Python package
+RUN cd /app/model_package && pip install -e .
+
+# Train model during build phase (not during startup)
+RUN cd /app/model_package && python -m catboost_model.train_pipeline
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
 # Expose port
 EXPOSE 8000
+ENV PORT=8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
+CMD ["uvicorn", "api.app.main:app", "--host", "0.0.0.0", "--port", "${PORT}"]
 
-# Use exec form for better signal handling
-CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
