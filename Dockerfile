@@ -28,7 +28,7 @@ COPY api/ /app/api/
 
 # Copy dataset to the expected location
 # Copy dataset from correct location
-COPY Dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
+# COPY Dataset.csv /app/model_package/catboost_model/datasets/Dataset.csv
 
 # Expose port
 EXPOSE 8000
