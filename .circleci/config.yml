@@ -31,13 +31,20 @@ jobs:
       - run:
           name: Build and Push Docker Image
           command: |
-            cd catboost_mlops_project/cat_mlops
+            cd C:\Users\User\Documents\exp\catboost_mlops_project\cat_mlops
             docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1 .
             docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1
       
       - run:
           name: Deploy to Cloud Run
           command: |
+            # Download dataset from GitHub
+            curl -L -o datasets/Dataset.csv https://github.com/YugayV/cat_mlops/blob/c8e2e444b7e52466e830af56d6b846fa46ada53f/datasets/Dataset.csv
+            # Build Docker image
+            docker build -t gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1 .
+            # Push Docker image to Google Container Registry
+            docker push gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1
+            # Deploy to Cloud Run
             gcloud run deploy catboost-ml-api \
               --image gcr.io/$GOOGLE_PROJECT_ID/catboost-ml-api:$CIRCLE_SHA1 \
               --platform managed \
